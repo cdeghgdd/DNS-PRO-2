@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import { Search, Star, Plus, Server as ServerIcon, Activity, Trash2, Edit } from 'lucide-react'
 import { useDnsStore } from '../../store/useDnsStore'
 import { useDnsVpn } from '../../hooks/useDnsVpn'
@@ -23,8 +23,13 @@ export const DnsListFeature: React.FC<DnsListProps> = ({
     setSelectedTag,
     toggleFavorite,
     deleteCustomServer,
-    activeServer
+    activeServer,
+    fetchRemoteServers
   } = useDnsStore()
+
+  useEffect(() => {
+    fetchRemoteServers()
+  }, [fetchRemoteServers])
 
   const { connect, disconnect, isConnected, isConnecting } = useDnsVpn()
   const { t } = useI18n()

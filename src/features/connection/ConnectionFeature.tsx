@@ -1,17 +1,26 @@
 import type React from "react";
-import { Power, Activity, Server as ServerIcon } from "lucide-react";
+import { useMemo, useEffect } from "react";
+import { Power, Activity, Server as ServerIcon, Star } from "lucide-react";
 import { useDnsStore } from "../../store/useDnsStore";
 import { useDnsVpn } from "../../hooks/useDnsVpn";
 import { useI18n } from "../../hooks/useI18n";
 import { usePing } from "../../hooks/usePing";
 
 export const ConnectionFeature: React.FC = () => {
-  const { activeServer, servers } = useDnsStore();
+  const { activeServer, servers, setActiveServer, fetchRemoteServers } = useDnsStore();
   const { isConnected, isConnecting, connect, disconnect } = useDnsVpn();
   const { t } = useI18n();
   const { pings, isPinging, pingServer } = usePing();
 
-  const defaultTargetServer = activeServer || servers[0];
+  useEffect(() => {
+    fetchRemoteServers();
+  }, [fetchRemoteServers]);
+
+  const favoriteServers = useMemo(() => {
+    return servers.filter((s) => s.isPin);
+  }, [servers]);
+
+  const defaultTargetServer = activeServer || favoriteServers[0] || servers[0];
 
   const handleToggle = async () => {
     if (isConnecting) return;
@@ -27,6 +36,14 @@ export const ConnectionFeature: React.FC = () => {
   const handlePingActive = () => {
     if (defaultTargetServer && defaultTargetServer.servers.length > 0) {
       pingServer(defaultTargetServer.key, defaultTargetServer.servers[0]);
+    }
+  };
+
+  const handleServerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedKey = e.target.value;
+    const target = servers.find((s) => s.key === selectedKey);
+    if (target) {
+      setActiveServer(target);
     }
   };
 
@@ -66,6 +83,31 @@ export const ConnectionFeature: React.FC = () => {
             {isConnecting ? t("connecting") : isConnected ? t("disconnect") : t("connect")}
           </span>
         </button>
+      </div>
+
+      <div className="w-full space-y-1">
+        <label className="text-xs font-semibold text-base-content/70 px-1 flex items-center gap-1">
+          <Star className="w-3.5 h-3.5 text-warning fill-warning" />
+          <span>Favorite Servers</span>
+        </label>
+        {favoriteServers.length > 0 ? (
+          <select
+            value={defaultTargetServer?.key || ""}
+            onChange={handleServerChange}
+            disabled={isConnected || isConnecting}
+            className="select select-bordered w-full rounded-2xl bg-base-100 font-bold text-sm shadow-sm"
+          >
+            {favoriteServers.map((server) => (
+              <option key={server.key} value={server.key}>
+                {server.name} ({server.servers.join(", ")})
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div className="p-3 bg-base-100 border border-base-300 rounded-2xl text-center text-xs text-base-content/60">
+            No favorite servers added yet. Star servers in Explorer to see them here!
+          </div>
+        )}
       </div>
 
       {defaultTargetServer && (
