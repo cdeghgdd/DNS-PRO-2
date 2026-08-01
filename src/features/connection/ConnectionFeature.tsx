@@ -1,51 +1,51 @@
-import React from 'react'
-import { Power, Activity, Server as ServerIcon, ShieldCheck } from 'lucide-react'
-import { useDnsStore } from '../../store/useDnsStore'
-import { useDnsVpn } from '../../hooks/useDnsVpn'
-import { useI18n } from '../../hooks/useI18n'
-import { usePing } from '../../hooks/usePing'
+import type React from "react";
+import { Power, Activity, Server as ServerIcon } from "lucide-react";
+import { useDnsStore } from "../../store/useDnsStore";
+import { useDnsVpn } from "../../hooks/useDnsVpn";
+import { useI18n } from "../../hooks/useI18n";
+import { usePing } from "../../hooks/usePing";
 
 export const ConnectionFeature: React.FC = () => {
-  const { activeServer, servers } = useDnsStore()
-  const { isConnected, isConnecting, connect, disconnect } = useDnsVpn()
-  const { t } = useI18n()
-  const { pings, isPinging, pingServer } = usePing()
+  const { activeServer, servers } = useDnsStore();
+  const { isConnected, isConnecting, connect, disconnect } = useDnsVpn();
+  const { t } = useI18n();
+  const { pings, isPinging, pingServer } = usePing();
 
-  const defaultTargetServer = activeServer || servers[0]
+  const defaultTargetServer = activeServer || servers[0];
 
   const handleToggle = async () => {
-    if (isConnecting) return
+    if (isConnecting) return;
     if (isConnected) {
-      await disconnect()
+      await disconnect();
     } else {
       if (defaultTargetServer) {
-        await connect(defaultTargetServer)
+        await connect(defaultTargetServer);
       }
     }
-  }
+  };
 
   const handlePingActive = () => {
     if (defaultTargetServer && defaultTargetServer.servers.length > 0) {
-      pingServer(defaultTargetServer.key, defaultTargetServer.servers[0])
+      pingServer(defaultTargetServer.key, defaultTargetServer.servers[0]);
     }
-  }
+  };
 
-  const activePing = defaultTargetServer ? pings[defaultTargetServer.key] : null
+  const activePing = defaultTargetServer ? pings[defaultTargetServer.key] : null;
 
   return (
     <div className="flex flex-col items-center justify-center p-6 space-y-6 max-w-md mx-auto">
       <div className="text-center space-y-1">
         <h2 className="text-2xl font-black text-base-content">
           {isConnected
-            ? t('connectedTo', { server: defaultTargetServer?.name || 'DNS' })
+            ? t("connectedTo", { server: defaultTargetServer?.name || "DNS" })
             : isConnecting
-            ? t('connecting')
-            : t('disconnected')}
+              ? t("connecting")
+              : t("disconnected")}
         </h2>
         <p className="text-sm text-base-content/70">
           {isConnected
-            ? defaultTargetServer?.servers.join(' • ')
-            : 'Select a server to secure your DNS queries'}
+            ? defaultTargetServer?.servers.join(" • ")
+            : "Select a server to secure your DNS queries"}
         </p>
       </div>
 
@@ -55,19 +55,15 @@ export const ConnectionFeature: React.FC = () => {
           disabled={isConnecting}
           className={`w-36 h-36 rounded-full flex flex-col items-center justify-center shadow-xl transition-all duration-300 transform active:scale-95 ${
             isConnected
-              ? 'bg-success text-success-content ring-8 ring-success/20'
+              ? "bg-success text-success-content ring-8 ring-success/20"
               : isConnecting
-              ? 'bg-warning text-warning-content ring-8 ring-warning/20 animate-pulse'
-              : 'bg-primary text-primary-content ring-8 ring-primary/20'
+                ? "bg-warning text-warning-content ring-8 ring-warning/20 animate-pulse"
+                : "bg-primary text-primary-content ring-8 ring-primary/20"
           }`}
         >
           <Power className="w-12 h-12 mb-1" />
           <span className="text-sm font-black uppercase tracking-wider">
-            {isConnecting
-              ? t('connecting')
-              : isConnected
-              ? t('disconnect')
-              : t('connect')}
+            {isConnecting ? t("connecting") : isConnected ? t("disconnect") : t("connect")}
           </span>
         </button>
       </div>
@@ -83,7 +79,7 @@ export const ConnectionFeature: React.FC = () => {
                     alt={defaultTargetServer.name}
                     className="w-6 h-6 object-contain"
                     onError={(e) => {
-                      ;(e.target as HTMLElement).style.display = 'none'
+                      (e.target as HTMLElement).style.display = "none";
                     }}
                   />
                 ) : (
@@ -93,7 +89,7 @@ export const ConnectionFeature: React.FC = () => {
               <div>
                 <h3 className="font-bold text-base-content">{defaultTargetServer.name}</h3>
                 <span className="text-xs text-base-content/60 uppercase">
-                  {defaultTargetServer.dnsType || 'UDP'} Protocol
+                  {defaultTargetServer.dnsType || "UDP"} Protocol
                 </span>
               </div>
             </div>
@@ -105,8 +101,8 @@ export const ConnectionFeature: React.FC = () => {
               <Activity className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs">
                 {activePing !== null && activePing !== undefined
-                  ? `${activePing} ${t('ms')}`
-                  : t('ping')}
+                  ? `${activePing} ${t("ms")}`
+                  : t("ping")}
               </span>
             </button>
           </div>
@@ -115,13 +111,13 @@ export const ConnectionFeature: React.FC = () => {
             <div>
               <span className="text-base-content/60 block">Primary DNS</span>
               <span className="font-mono font-semibold text-base-content">
-                {defaultTargetServer.servers[0] || '-'}
+                {defaultTargetServer.servers[0] || "-"}
               </span>
             </div>
             <div>
               <span className="text-base-content/60 block">Secondary DNS</span>
               <span className="font-mono font-semibold text-base-content">
-                {defaultTargetServer.servers[1] || '-'}
+                {defaultTargetServer.servers[1] || "-"}
               </span>
             </div>
           </div>
@@ -136,11 +132,6 @@ export const ConnectionFeature: React.FC = () => {
           )}
         </div>
       )}
-
-      <div className="flex items-center gap-2 text-xs text-base-content/60 bg-base-200 px-4 py-2 rounded-full">
-        <ShieldCheck className="w-4 h-4 text-success" />
-        <span>Native Android VpnService Enforced</span>
-      </div>
     </div>
-  )
-}
+  );
+};

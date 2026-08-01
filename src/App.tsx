@@ -6,8 +6,6 @@ import { ConnectionFeature } from "./features/connection/ConnectionFeature";
 import { DnsListFeature } from "./features/dns-list/DnsListFeature";
 import { CustomDnsFeature } from "./features/custom-dns/CustomDnsFeature";
 import { SettingsFeature } from "./features/settings/SettingsFeature";
-import { LogsFeature } from "./features/logs/LogsFeature";
-import { ImportExportFeature } from "./features/import-export/ImportExportFeature";
 import { useSettingsStore } from "./store/useSettingsStore";
 import type { ServerStore } from "./types";
 
@@ -56,13 +54,6 @@ export const App: React.FC = () => {
             onOpenAddCustom={handleOpenAddCustom}
             onOpenEditCustom={handleOpenEditCustom}
           />
-        )}
-
-        {activeTab === "tools" && (
-          <div className="p-4 space-y-4 pb-24 max-w-md mx-auto">
-            <LogsFeature />
-            <ImportExportFeature />
-          </div>
         )}
 
         {activeTab === "settings" && <SettingsFeature />}

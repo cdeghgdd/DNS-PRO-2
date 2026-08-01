@@ -1,9 +1,10 @@
-import React from 'react'
-import { Power, RefreshCw, Sun, Globe, Bell } from 'lucide-react'
-import { useSettingsStore } from '../../store/useSettingsStore'
-import { useI18n } from '../../hooks/useI18n'
-import { LanguageKey } from '../../i18n/translations'
-import { ImportExportFeature } from '../import-export/ImportExportFeature'
+import type React from "react";
+import { Power, RefreshCw, Sun, Globe, Bell } from "lucide-react";
+import { useSettingsStore } from "../../store/useSettingsStore";
+import { useI18n } from "../../hooks/useI18n";
+import type { LanguageKey } from "../../i18n/translations";
+import { ImportExportFeature } from "../import-export/ImportExportFeature";
+import { LogsFeature } from "../logs/LogsFeature";
 
 export const SettingsFeature: React.FC = () => {
   const {
@@ -16,14 +17,14 @@ export const SettingsFeature: React.FC = () => {
     lng,
     setLng,
     notificationsEnabled,
-    setNotificationsEnabled
-  } = useSettingsStore()
+    setNotificationsEnabled,
+  } = useSettingsStore();
 
-  const { t } = useI18n()
+  const { t } = useI18n();
 
   return (
     <div className="p-4 space-y-4 pb-24 max-w-md mx-auto">
-      <h2 className="text-xl font-black text-base-content">{t('settings')}</h2>
+      <h2 className="text-xl font-black text-base-content">{t("settings")}</h2>
 
       <div className="bg-base-100 border border-base-300 rounded-2xl p-4 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
@@ -32,9 +33,7 @@ export const SettingsFeature: React.FC = () => {
               <Power className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <span className="font-bold text-sm text-base-content block">
-                {t('autoStart')}
-              </span>
+              <span className="font-bold text-sm text-base-content block">{t("autoStart")}</span>
               <span className="text-xs text-base-content/60 block">
                 Launch DNS service on device boot
               </span>
@@ -57,7 +56,7 @@ export const SettingsFeature: React.FC = () => {
             </div>
             <div>
               <span className="font-bold text-sm text-base-content block">
-                {t('autoReconnect')}
+                {t("autoReconnect")}
               </span>
               <span className="text-xs text-base-content/60 block">
                 Reconnect automatically if network drops
@@ -103,24 +102,24 @@ export const SettingsFeature: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-base-200 flex items-center justify-center">
               <Sun className="w-4 h-4 text-primary" />
             </div>
-            <span className="font-bold text-sm text-base-content">{t('theme')}</span>
+            <span className="font-bold text-sm text-base-content">{t("theme")}</span>
           </div>
           <div className="join">
             <button
-              onClick={() => setTheme('light')}
+              onClick={() => setTheme("light")}
               className={`btn btn-xs join-item ${
-                theme === 'light' ? 'btn-primary' : 'btn-ghost bg-base-200'
+                theme === "light" ? "btn-primary" : "btn-ghost bg-base-200"
               }`}
             >
-              {t('light')}
+              {t("light")}
             </button>
             <button
-              onClick={() => setTheme('dark')}
+              onClick={() => setTheme("dark")}
               className={`btn btn-xs join-item ${
-                theme === 'dark' ? 'btn-primary' : 'btn-ghost bg-base-200'
+                theme === "dark" ? "btn-primary" : "btn-ghost bg-base-200"
               }`}
             >
-              {t('dark')}
+              {t("dark")}
             </button>
           </div>
         </div>
@@ -132,7 +131,7 @@ export const SettingsFeature: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-base-200 flex items-center justify-center">
               <Globe className="w-4 h-4 text-primary" />
             </div>
-            <span className="font-bold text-sm text-base-content">{t('language')}</span>
+            <span className="font-bold text-sm text-base-content">{t("language")}</span>
           </div>
           <select
             value={lng}
@@ -145,12 +144,12 @@ export const SettingsFeature: React.FC = () => {
           </select>
         </div>
       </div>
-
+      <LogsFeature />
       <ImportExportFeature />
 
       <div className="text-center text-xs text-base-content/40 pt-4">
-        <span>DNS Changer Android • {t('version')}</span>
+        <span>DNS Changer Android • {t("version")}</span>
       </div>
     </div>
-  )
-}
+  );
+};
