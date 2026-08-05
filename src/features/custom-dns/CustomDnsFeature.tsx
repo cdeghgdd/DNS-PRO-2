@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
+import type React from 'react'
+import { useState, useEffect } from 'react'
+import { X, Server, Check } from 'lucide-react'
 import { useDnsStore } from '../../store/useDnsStore'
 import { useI18n } from '../../hooks/useI18n'
 import { isValidIp, isValidDohUrl, isValidDotDomain } from '../../utils/validator'
@@ -10,6 +11,8 @@ interface CustomDnsModalProps {
   onClose: () => void
   editingServer?: ServerStore | null
 }
+
+const PRESET_TAGS = ['Custom', 'Gaming', 'Privacy', 'Anti-Ads', 'Fast']
 
 export const CustomDnsFeature: React.FC<CustomDnsModalProps> = ({
   isOpen,
@@ -25,7 +28,7 @@ export const CustomDnsFeature: React.FC<CustomDnsModalProps> = ({
   const [dnsType, setDnsType] = useState<DnsType>('udp')
   const [dohUrl, setDohUrl] = useState('')
   const [dotDomain, setDotDomain] = useState('')
-  const [tagsStr, setTagsStr] = useState('Custom')
+  const [selectedTags, setSelectedTags] = useState<string[]>(['Custom'])
   const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
@@ -36,7 +39,7 @@ export const CustomDnsFeature: React.FC<CustomDnsModalProps> = ({
       setDnsType(editingServer.dnsType || 'udp')
       setDohUrl(editingServer.dohUrl || '')
       setDotDomain(editingServer.dotDomain || '')
-      setTagsStr(editingServer.tags?.join(', ') || 'Custom')
+      setSelectedTags(editingServer.tags && editingServer.tags.length > 0 ? editingServer.tags : ['Custom'])
     } else {
       setName('')
       setIp1('')
@@ -44,12 +47,22 @@ export const CustomDnsFeature: React.FC<CustomDnsModalProps> = ({
       setDnsType('udp')
       setDohUrl('')
       setDotDomain('')
-      setTagsStr('Custom')
+      setSelectedTags(['Custom'])
     }
     setErrorMsg('')
   }, [editingServer, isOpen])
 
   if (!isOpen) return null
+
+  const handleTagToggle = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      if (selectedTags.length > 1) {
+        setSelectedTags(selectedTags.filter((t) => t !== tag))
+      }
+    } else {
+      setSelectedTags([...selectedTags, tag])
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,11 +96,6 @@ export const CustomDnsFeature: React.FC<CustomDnsModalProps> = ({
     const serversList = [ip1.trim()]
     if (ip2.trim()) serversList.push(ip2.trim())
 
-    const tagsArr = tagsStr
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean)
-
     if (editingServer) {
       updateCustomServer({
         ...editingServer,
@@ -96,7 +104,9 @@ export const CustomDnsFeature: React.FC<CustomDnsModalProps> = ({
         dnsType,
         dohUrl: dnsType === 'doh' ? dohUrl.trim() : undefined,
         dotDomain: dnsType === 'dot' ? dotDomain.trim() : undefined,
-        tags: tagsArr
+        tags: selectedTags,
+        isPin: true,
+        isCustom: true
       })
     } else {
       const newKey = `CUSTOM_${Date.now()}`
@@ -106,8 +116,8 @@ export const CustomDnsFeature: React.FC<CustomDnsModalProps> = ({
         servers: serversList,
         avatar: '/servers-icon/def.png',
         rate: 5,
-        tags: tagsArr,
-        isPin: false,
+        tags: selectedTags,
+        isPin: true,
         isCustom: true,
         dnsType,
         dohUrl: dnsType === 'doh' ? dohUrl.trim() : undefined,
@@ -119,54 +129,64 @@ export const CustomDnsFeature: React.FC<CustomDnsModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-base-100 border border-base-300 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-extrabold text-lg text-base-content">
-            {editingServer ? t('edit') : t('addCustomDns')}
-          </h3>
-          <button onClick={onClose} className="btn btn-ghost btn-circle btn-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div
+        className="fixed inset-0"
+        onClick={onClose}
+      />
+
+      <div className="relative bg-base-100 border border-base-300 rounded-3xl w-full max-w-md p-5 shadow-2xl space-y-4 z-10 max-h-[90vh] overflow-y-auto no-scrollbar">
+        <div className="flex items-center justify-between border-b border-base-200 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Server className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-base text-base-content">
+              {editingServer ? t('edit') : t('addCustomDns')}
+            </h3>
+          </div>
+          <button onClick={onClose} className="btn btn-ghost btn-circle btn-sm text-base-content/70">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {errorMsg && (
-          <div className="alert alert-error text-xs py-2 rounded-xl">
+          <div className="alert alert-error text-xs py-2 px-3 rounded-xl">
             <span>{errorMsg}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="label label-text text-xs font-semibold">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-base-content/70">
               {t('serverName')}
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. My Custom DNS"
-              className="input input-sm input-bordered w-full rounded-xl"
+              placeholder="e.g. My DNS"
+              className="input input-sm input-bordered w-full rounded-xl font-semibold text-xs"
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="label label-text text-xs font-semibold">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-base-content/70">
                 {t('serverAddress1')}
               </label>
               <input
                 type="text"
                 value={ip1}
                 onChange={(e) => setIp1(e.target.value)}
-                placeholder="1.1.1.1 or ::1"
+                placeholder="1.1.1.1"
                 className="input input-sm input-bordered w-full rounded-xl font-mono text-xs"
                 required
               />
             </div>
-            <div>
-              <label className="label label-text text-xs font-semibold">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-base-content/70">
                 {t('serverAddress2')}
               </label>
               <input
@@ -179,31 +199,57 @@ export const CustomDnsFeature: React.FC<CustomDnsModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label className="label label-text text-xs font-semibold">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-base-content/70">
               {t('dnsType')}
             </label>
-            <select
-              value={dnsType}
-              onChange={(e) => setDnsType(e.target.value as DnsType)}
-              className="select select-sm select-bordered w-full rounded-xl text-xs"
-            >
-              <option value="udp">Plain DNS (UDP/TCP)</option>
-              <option value="doh">DNS-over-HTTPS (DoH)</option>
-              <option value="dot">DNS-over-TLS (DoT)</option>
-            </select>
+            <div className="grid grid-cols-3 gap-1 p-1 bg-base-200 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setDnsType('udp')}
+                className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  dnsType === 'udp'
+                    ? 'bg-primary text-primary-content shadow-xs'
+                    : 'text-base-content/70'
+                }`}
+              >
+                UDP
+              </button>
+              <button
+                type="button"
+                onClick={() => setDnsType('doh')}
+                className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  dnsType === 'doh'
+                    ? 'bg-primary text-primary-content shadow-xs'
+                    : 'text-base-content/70'
+                }`}
+              >
+                DoH
+              </button>
+              <button
+                type="button"
+                onClick={() => setDnsType('dot')}
+                className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  dnsType === 'dot'
+                    ? 'bg-primary text-primary-content shadow-xs'
+                    : 'text-base-content/70'
+                }`}
+              >
+                DoT
+              </button>
+            </div>
           </div>
 
           {dnsType === 'doh' && (
-            <div>
-              <label className="label label-text text-xs font-semibold">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-base-content/70">
                 {t('dohUrl')}
               </label>
               <input
                 type="url"
                 value={dohUrl}
                 onChange={(e) => setDohUrl(e.target.value)}
-                placeholder="https://dns.example.com/dns-query"
+                placeholder="https://example.com/dns-query"
                 className="input input-sm input-bordered w-full rounded-xl font-mono text-xs"
                 required
               />
@@ -211,41 +257,54 @@ export const CustomDnsFeature: React.FC<CustomDnsModalProps> = ({
           )}
 
           {dnsType === 'dot' && (
-            <div>
-              <label className="label label-text text-xs font-semibold">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-base-content/70">
                 {t('dotDomain')}
               </label>
               <input
                 type="text"
                 value={dotDomain}
                 onChange={(e) => setDotDomain(e.target.value)}
-                placeholder="dns.example.com"
+                placeholder="example.com"
                 className="input input-sm input-bordered w-full rounded-xl font-mono text-xs"
                 required
               />
             </div>
           )}
 
-          <div>
-            <label className="label label-text text-xs font-semibold">Tags</label>
-            <input
-              type="text"
-              value={tagsStr}
-              onChange={(e) => setTagsStr(e.target.value)}
-              placeholder="Gaming, Web, Custom"
-              className="input input-sm input-bordered w-full rounded-xl text-xs"
-            />
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-base-content/70">
+              Tags
+            </label>
+            <div className="flex flex-wrap gap-1">
+              {PRESET_TAGS.map((tag) => {
+                const isSelected = selectedTags.includes(tag)
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleTagToggle(tag)}
+                    className={`btn btn-xs rounded-lg gap-1 ${
+                      isSelected ? 'btn-primary' : 'btn-ghost bg-base-200 text-base-content/60'
+                    }`}
+                  >
+                    {isSelected && <Check className="w-3 h-3" />}
+                    <span>{tag}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-2 border-t border-base-200">
             <button
               type="button"
               onClick={onClose}
-              className="btn btn-ghost btn-sm flex-1 rounded-xl"
+              className="btn btn-ghost btn-sm flex-1 rounded-xl font-bold"
             >
               {t('cancel')}
             </button>
-            <button type="submit" className="btn btn-primary btn-sm flex-1 rounded-xl">
+            <button type="submit" className="btn btn-primary btn-sm flex-1 rounded-xl font-bold">
               {editingServer ? t('save') : t('add')}
             </button>
           </div>
@@ -254,3 +313,4 @@ export const CustomDnsFeature: React.FC<CustomDnsModalProps> = ({
     </div>
   )
 }
+

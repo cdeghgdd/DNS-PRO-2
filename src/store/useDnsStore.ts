@@ -62,11 +62,19 @@ function loadInitialServers(): ServerStore[] {
     const favKeys = getFavKeys();
     const customServers = getCustomServers();
 
-    const merged = [...DEFAULT_SERVERS, ...customServers].map((srv) => ({
-      ...srv,
-      avatar: formatAvatarUrl(srv.avatar),
-      isPin: favKeys.includes(srv.key) || favKeys.includes(srv.key.toUpperCase()),
-    }));
+    const merged = [
+      ...DEFAULT_SERVERS.map((srv) => ({
+        ...srv,
+        avatar: formatAvatarUrl(srv.avatar),
+        isPin: favKeys.includes(srv.key) || favKeys.includes(srv.key.toUpperCase()),
+      })),
+      ...customServers.map((srv) => ({
+        ...srv,
+        avatar: formatAvatarUrl(srv.avatar),
+        isCustom: true,
+        isPin: srv.isPin !== undefined ? srv.isPin : true,
+      })),
+    ];
     return merged;
   } catch {
     return DEFAULT_SERVERS;
@@ -103,7 +111,11 @@ export const useDnsStore = create<DnsState>((set) => {
         if (!Array.isArray(data)) return;
 
         const favKeys = getFavKeys();
-        const customServers = getCustomServers();
+        const customServers = getCustomServers().map((s) => ({
+          ...s,
+          isCustom: true,
+          isPin: s.isPin !== undefined ? s.isPin : true,
+        }));
 
         const remoteServers: ServerStore[] = data.map((item: any) => {
           const isFav =
@@ -139,7 +151,7 @@ export const useDnsStore = create<DnsState>((set) => {
 
     addCustomServer: (server) =>
       set((state) => {
-        const newServer = { ...server, isCustom: true };
+        const newServer = { ...server, isCustom: true, isPin: true };
         const nextServers = [...state.servers, newServer];
         const customOnly = nextServers.filter((s) => s.isCustom);
         localStorage.setItem(STORAGE_SERVERS_KEY, JSON.stringify(customOnly));

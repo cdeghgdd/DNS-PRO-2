@@ -44,6 +44,7 @@ export const DnsListFeature: React.FC<DnsListProps> = ({ onOpenEditCustom }) => 
 
   const filteredServers = useMemo(() => {
     return servers.filter((srv) => {
+      if (srv.isCustom) return false;
       const matchesSearch =
         srv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         srv.servers.some((ip) => ip.includes(searchQuery));
