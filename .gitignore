@@ -26,4 +26,4 @@ dist-ssr
 # Android
 android/app/build/
 android/.gradle/
-android/app/src
+android/app/src/main/assets/public
