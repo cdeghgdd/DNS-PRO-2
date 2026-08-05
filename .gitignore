@@ -27,3 +27,5 @@ dist-ssr
 android/app/build/
 android/.gradle/
 android/app/src/main/assets/public
+*.jks
+*.keystore
