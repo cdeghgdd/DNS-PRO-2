@@ -1,8 +1,7 @@
 import type React from "react";
-import { Power, RefreshCw, Sun, Globe, Bell } from "lucide-react";
+import { Power, RefreshCw, Sun, Bell } from "lucide-react";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import { useI18n } from "../../hooks/useI18n";
-import type { LanguageKey } from "../../i18n/translations";
 import { ImportExportFeature } from "../import-export/ImportExportFeature";
 import { LogsFeature } from "../logs/LogsFeature";
 
@@ -14,8 +13,6 @@ export const SettingsFeature: React.FC = () => {
     setAutoReconnect,
     theme,
     setTheme,
-    lng,
-    setLng,
     notificationsEnabled,
     setNotificationsEnabled,
   } = useSettingsStore();
@@ -125,24 +122,6 @@ export const SettingsFeature: React.FC = () => {
         </div>
 
         <div className="divider my-0" />
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-base-200 flex items-center justify-center">
-              <Globe className="w-4 h-4 text-primary" />
-            </div>
-            <span className="font-bold text-sm text-base-content">{t("language")}</span>
-          </div>
-          <select
-            value={lng}
-            onChange={(e) => setLng(e.target.value as LanguageKey)}
-            className="select select-sm select-bordered rounded-xl text-xs"
-          >
-            <option value="eng">English</option>
-            <option value="fa">فارسی</option>
-            <option value="ru">Русский</option>
-          </select>
-        </div>
       </div>
       <LogsFeature />
       <ImportExportFeature />
