@@ -1,6 +1,7 @@
 import type React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, ListFilter, Settings as SettingsIcon } from "lucide-react";
+import { MdOutlineExplore } from "react-icons/md";
+import { TbSettings, TbSmartHome } from "react-icons/tb";
 import { useI18n } from "../hooks/useI18n";
 
 export const BottomNav: React.FC = () => {
@@ -8,9 +9,9 @@ export const BottomNav: React.FC = () => {
   const location = useLocation();
 
   const tabs = [
-    { key: "home", path: "/", label: t("home"), icon: Home },
-    { key: "explore", path: "/explorer", label: t("explore"), icon: ListFilter },
-    { key: "settings", path: "/settings", label: t("settings"), icon: SettingsIcon },
+    { key: "home", path: "/", label: t("home"), icon: TbSmartHome },
+    { key: "explore", path: "/explorer", label: t("explore"), icon: MdOutlineExplore },
+    { key: "settings", path: "/settings", label: t("settings"), icon: TbSettings },
   ];
 
   return (
@@ -34,7 +35,7 @@ export const BottomNav: React.FC = () => {
                 isActive ? "bg-primary/15 scale-105" : ""
               }`}
             >
-              <IconComponent className={`w-5 h-5 ${isActive ? "text-primary stroke-[2.5]" : "stroke-[1.75]"}`} />
+              <IconComponent className="w-5 h-5" />
             </div>
             <span className="text-[11px] mt-0.5 tracking-tight font-medium">{tab.label}</span>
           </Link>
@@ -43,3 +44,4 @@ export const BottomNav: React.FC = () => {
     </nav>
   );
 };
+
