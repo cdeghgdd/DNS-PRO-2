@@ -23,8 +23,8 @@ export const SettingsFeature: React.FC = () => {
   const { t } = useI18n();
 
   return (
-    <div className="p-4 space-y-4 pb-24 max-w-md mx-auto">
-      <h2 className="text-xl font-black text-base-content">{t("settings")}</h2>
+    <div className="p-4 space-y-4 pb-8 max-w-md mx-auto">
+      <h2 className="text-2xl font-black text-base-content pt-2">{t("settings")}</h2>
 
       <div className="bg-base-100 border border-base-300 rounded-2xl p-4 shadow-sm space-y-4">
         <div className="flex items-center justify-between">

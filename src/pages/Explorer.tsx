@@ -5,9 +5,12 @@ import { useCustomDnsModal } from "../context/CustomDnsModalContext";
 export const ExplorerPage: React.FC = () => {
   const { openAddCustom, openEditCustom } = useCustomDnsModal();
   return (
-    <DnsListFeature
-      onOpenAddCustom={openAddCustom}
-      onOpenEditCustom={openEditCustom}
-    />
+    <div className="h-full overflow-hidden">
+      <DnsListFeature
+        onOpenAddCustom={openAddCustom}
+        onOpenEditCustom={openEditCustom}
+      />
+    </div>
   );
 };
+

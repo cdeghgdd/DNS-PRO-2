@@ -8,28 +8,35 @@ export const BottomNav: React.FC = () => {
   const location = useLocation();
 
   const tabs = [
-    { key: "home", path: "/", label: t("home"), icon: <Home className="w-5 h-5" /> },
-    { key: "explore", path: "/explorer", label: t("explore"), icon: <ListFilter className="w-5 h-5" /> },
-    { key: "settings", path: "/settings", label: t("settings"), icon: <SettingsIcon className="w-5 h-5" /> },
+    { key: "home", path: "/", label: t("home"), icon: Home },
+    { key: "explore", path: "/explorer", label: t("explore"), icon: ListFilter },
+    { key: "settings", path: "/settings", label: t("settings"), icon: SettingsIcon },
   ];
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-300 flex items-center justify-around h-16 px-2 z-40"
+      className="absolute bottom-0 left-0 right-0 max-w-md mx-auto bg-base-100/90 backdrop-blur-md border-t border-base-300/60 flex items-center justify-around h-16 px-4 z-40"
       dir={lng === "fa" ? "rtl" : "ltr"}
     >
       {tabs.map((tab) => {
         const isActive = location.pathname === tab.path;
+        const IconComponent = tab.icon;
         return (
           <Link
             key={tab.key}
             to={tab.path}
-            className={`flex flex-col items-center justify-center w-full py-1 transition-colors duration-200 ${
-              isActive ? "text-primary font-bold" : "text-base-content/60 hover:text-base-content"
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all duration-200 active:scale-95 ${
+              isActive ? "text-primary font-bold" : "text-base-content/50 hover:text-base-content/80"
             }`}
           >
-            <div className={`p-1 rounded-xl ${isActive ? "bg-primary/10" : ""}`}>{tab.icon}</div>
-            <span className="text-xs mt-0.5">{tab.label}</span>
+            <div
+              className={`px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${
+                isActive ? "bg-primary/15 scale-105" : ""
+              }`}
+            >
+              <IconComponent className={`w-5 h-5 ${isActive ? "text-primary stroke-[2.5]" : "stroke-[1.75]"}`} />
+            </div>
+            <span className="text-[11px] mt-0.5 tracking-tight font-medium">{tab.label}</span>
           </Link>
         );
       })}

@@ -3,7 +3,7 @@ import { ConnectionFeature } from "../features/connection/ConnectionFeature";
 
 export const HomePage: React.FC = () => {
   return (
-    <div className="p-4 space-y-4 pb-24">
+    <div className="h-full overflow-y-auto no-scrollbar pb-8">
       <ConnectionFeature />
     </div>
   );

@@ -7,7 +7,6 @@ import {
   RouterProvider,
   Outlet,
 } from "@tanstack/react-router";
-import { Navbar } from "./components/Navbar";
 import { BottomNav } from "./components/BottomNav";
 import { CustomDnsFeature } from "./features/custom-dns/CustomDnsFeature";
 import {
@@ -45,12 +44,10 @@ const RootLayout: React.FC = () => {
   return (
     <CustomDnsModalProvider>
       <div
-        className="min-h-screen bg-base-200 text-base-content flex flex-col font-sans"
+        className="h-screen w-full max-w-md mx-auto bg-base-200 text-base-content flex flex-col font-sans overflow-hidden relative select-none"
         dir={lng === "fa" ? "rtl" : "ltr"}
       >
-        <Navbar />
-
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-hidden relative flex flex-col pb-20">
           <Outlet />
         </main>
 

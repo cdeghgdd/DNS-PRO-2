@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -16,10 +17,49 @@ import java.io.FileOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.net.Socket
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLSocketFactory
 import kotlinx.coroutines.*
+
+class ProtectedSSLSocketFactory(
+    private val delegate: SSLSocketFactory,
+    private val protectAction: (Socket) -> Boolean
+) : SSLSocketFactory() {
+    override fun getDefaultCipherSuites(): Array<String> = delegate.defaultCipherSuites
+    override fun getSupportedCipherSuites(): Array<String> = delegate.supportedCipherSuites
+
+    override fun createSocket(s: Socket?, host: String?, port: Int, autoClose: Boolean): Socket {
+        val sock = delegate.createSocket(s, host, port, autoClose)
+        protectAction(sock)
+        return sock
+    }
+
+    override fun createSocket(host: String?, port: Int): Socket {
+        val sock = delegate.createSocket(host, port)
+        protectAction(sock)
+        return sock
+    }
+
+    override fun createSocket(host: String?, port: Int, localHost: InetAddress?, localPort: Int): Socket {
+        val sock = delegate.createSocket(host, port, localHost, localPort)
+        protectAction(sock)
+        return sock
+    }
+
+    override fun createSocket(host: InetAddress?, port: Int): Socket {
+        val sock = delegate.createSocket(host, port)
+        protectAction(sock)
+        return sock
+    }
+
+    override fun createSocket(address: InetAddress?, port: Int, localAddress: InetAddress?, localPort: Int): Socket {
+        val sock = delegate.createSocket(address, port, localAddress, localPort)
+        protectAction(sock)
+        return sock
+    }
+}
 
 class DnsVpnService : VpnService() {
 
@@ -74,7 +114,11 @@ class DnsVpnService : VpnService() {
 
         createNotificationChannel()
         val notification = createNotification("Connecting to DNS...")
-        startForeground(NOTIFICATION_ID, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
 
         try {
             val builder = Builder()
@@ -82,17 +126,28 @@ class DnsVpnService : VpnService() {
                 .setMtu(1500)
                 .addAddress("10.0.0.2", 32)
                 .addAddress("fd00::2", 128)
+                .addDnsServer("10.0.0.2")
+                .addDnsServer("fd00::2")
+                .addRoute("10.0.0.2", 32)
+                .addRoute("fd00::2", 128)
+                .allowBypass()
 
             for (server in servers) {
-                builder.addDnsServer(server)
+                try {
+                    val addr = InetAddress.getByName(server)
+                    if (addr is java.net.Inet4Address) {
+                        builder.addDnsServer(server)
+                        builder.addRoute(server, 32)
+                    } else if (addr is java.net.Inet6Address) {
+                        builder.addDnsServer(server)
+                        builder.addRoute(server, 128)
+                    }
+                } catch (e: Exception) {
+                }
             }
 
-            for (server in servers) {
-                if (server.contains(":")) {
-                    builder.addRoute(server, 128)
-                } else {
-                    builder.addRoute(server, 32)
-                }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                builder.setMetered(false)
             }
 
             vpnInterface = builder.establish()
@@ -117,18 +172,70 @@ class DnsVpnService : VpnService() {
         val pfd = vpnInterface ?: return
         val inputStream = FileInputStream(pfd.fileDescriptor)
         val outputStream = FileOutputStream(pfd.fileDescriptor)
-        val buffer = ByteArray(32767)
+
+        val readBuffer = ByteArray(32767)
 
         while (isRunning && serviceScope.isActive) {
             try {
-                val length = inputStream.read(buffer)
-                if (length <= 0) {
-                    delay(10)
+                val length = inputStream.read(readBuffer)
+                if (length < 28) {
+                    delay(2)
                     continue
                 }
-                if (currentDnsServers.isNotEmpty()) {
-                    val targetIp = currentDnsServers[0]
-                    forwardDnsRequest(buffer, length, targetIp, outputStream)
+
+                val packetCopy = readBuffer.copyOf(length)
+                val versionAndIhl = packetCopy[0].toInt() and 0xFF
+                val version = versionAndIhl and 0xF0
+
+                if (version == 0x40) {
+                    val ihl = (versionAndIhl and 0x0F) * 4
+                    if (length < ihl + 8) continue
+                    val protocol = packetCopy[9].toInt() and 0xFF
+                    if (protocol != 17) continue
+
+                    val srcPort = ((packetCopy[ihl].toInt() and 0xFF) shl 8) or (packetCopy[ihl + 1].toInt() and 0xFF)
+                    val dstPort = ((packetCopy[ihl + 2].toInt() and 0xFF) shl 8) or (packetCopy[ihl + 3].toInt() and 0xFF)
+
+                    if (dstPort == 53 && currentDnsServers.isNotEmpty()) {
+                        val srcIp = packetCopy.copyOfRange(12, 16)
+                        val dstIp = packetCopy.copyOfRange(16, 20)
+                        val dnsQuery = packetCopy.copyOfRange(ihl + 8, length)
+
+                        serviceScope.launch(Dispatchers.IO) {
+                            forwardDnsQueryIp4(
+                                dnsQuery,
+                                outputStream,
+                                srcIp,
+                                dstIp,
+                                srcPort,
+                                dstPort
+                            )
+                        }
+                    }
+                } else if (version == 0x60) {
+                    if (length < 48) continue
+                    val nextHeader = packetCopy[6].toInt() and 0xFF
+                    if (nextHeader != 17) continue
+
+                    val srcPort = ((packetCopy[40].toInt() and 0xFF) shl 8) or (packetCopy[41].toInt() and 0xFF)
+                    val dstPort = ((packetCopy[42].toInt() and 0xFF) shl 8) or (packetCopy[43].toInt() and 0xFF)
+
+                    if (dstPort == 53 && currentDnsServers.isNotEmpty()) {
+                        val srcIp = packetCopy.copyOfRange(8, 24)
+                        val dstIp = packetCopy.copyOfRange(24, 40)
+                        val dnsQuery = packetCopy.copyOfRange(48, length)
+
+                        serviceScope.launch(Dispatchers.IO) {
+                            forwardDnsQueryIp6(
+                                dnsQuery,
+                                outputStream,
+                                srcIp,
+                                dstIp,
+                                srcPort,
+                                dstPort
+                            )
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 if (!isRunning) break
@@ -136,76 +243,136 @@ class DnsVpnService : VpnService() {
         }
     }
 
-    private fun forwardDnsRequest(buffer: ByteArray, length: Int, targetIp: String, outputStream: FileOutputStream) {
-        try {
-            if (currentDnsType == "doh" && currentDohUrl.isNotEmpty()) {
-                forwardDoH(buffer, length, currentDohUrl, outputStream)
-            } else if (currentDnsType == "dot" && currentDotDomain.isNotEmpty()) {
-                forwardDoT(buffer, length, targetIp, currentDotDomain, outputStream)
-            } else {
-                forwardUdp(buffer, length, targetIp, outputStream)
+    private fun forwardDnsQueryIp4(
+        dnsQuery: ByteArray,
+        outputStream: FileOutputStream,
+        srcIp: ByteArray,
+        dstIp: ByteArray,
+        srcPort: Int,
+        dstPort: Int
+    ) {
+        val dnsResponse = resolveDnsQuery(dnsQuery) ?: return
+
+        val respPacket = buildIp4UdpResponsePacket(
+            dstIp,
+            srcIp,
+            dstPort,
+            srcPort,
+            dnsResponse
+        )
+        synchronized(outputStream) {
+            try {
+                outputStream.write(respPacket)
+                outputStream.flush()
+            } catch (e: Exception) {
             }
-        } catch (e: Exception) {
         }
     }
 
-    private fun forwardUdp(buffer: ByteArray, length: Int, targetIp: String, outputStream: FileOutputStream) {
-        var socket: DatagramSocket? = null
-        try {
-            socket = DatagramSocket()
-            protect(socket)
-            val address = InetAddress.getByName(targetIp)
-            val packet = DatagramPacket(buffer, length, address, 53)
-            socket.send(packet)
+    private fun forwardDnsQueryIp6(
+        dnsQuery: ByteArray,
+        outputStream: FileOutputStream,
+        srcIp: ByteArray,
+        dstIp: ByteArray,
+        srcPort: Int,
+        dstPort: Int
+    ) {
+        val dnsResponse = resolveDnsQuery(dnsQuery) ?: return
 
-            val recvBuffer = ByteArray(32767)
-            val recvPacket = DatagramPacket(recvBuffer, recvBuffer.size)
-            socket.soTimeout = 3000
-            socket.receive(recvPacket)
-
-            outputStream.write(recvBuffer, 0, recvPacket.length)
-        } catch (e: Exception) {
-        } finally {
-            socket?.close()
+        val respPacket = buildIp6UdpResponsePacket(
+            dstIp,
+            srcIp,
+            dstPort,
+            srcPort,
+            dnsResponse
+        )
+        synchronized(outputStream) {
+            try {
+                outputStream.write(respPacket)
+                outputStream.flush()
+            } catch (e: Exception) {
+            }
         }
     }
 
-    private fun forwardDoH(buffer: ByteArray, length: Int, dohUrl: String, outputStream: FileOutputStream) {
+    private fun resolveDnsQuery(dnsQuery: ByteArray): ByteArray? {
+        return if (currentDnsType == "doh" && currentDohUrl.isNotEmpty()) {
+            queryDoH(dnsQuery, currentDohUrl)
+        } else if (currentDnsType == "dot" && currentDotDomain.isNotEmpty() && currentDnsServers.isNotEmpty()) {
+            queryDoT(dnsQuery, currentDnsServers[0], currentDotDomain)
+        } else {
+            queryUdp(dnsQuery, currentDnsServers)
+        }
+    }
+
+    private fun queryUdp(dnsQuery: ByteArray, servers: List<String>): ByteArray? {
+        for (targetIp in servers) {
+            var socket: DatagramSocket? = null
+            try {
+                socket = DatagramSocket()
+                protect(socket)
+                val address = InetAddress.getByName(targetIp)
+                val packet = DatagramPacket(dnsQuery, dnsQuery.size, address, 53)
+                socket.send(packet)
+
+                val recvBuffer = ByteArray(32767)
+                val recvPacket = DatagramPacket(recvBuffer, recvBuffer.size)
+                socket.soTimeout = 3000
+                socket.receive(recvPacket)
+
+                val result = ByteArray(recvPacket.length)
+                System.arraycopy(recvPacket.data, 0, result, 0, recvPacket.length)
+                return result
+            } catch (e: Exception) {
+            } finally {
+                socket?.close()
+            }
+        }
+        return null
+    }
+
+    private fun queryDoH(dnsQuery: ByteArray, dohUrl: String): ByteArray? {
         try {
             val url = URL(dohUrl)
             val connection = url.openConnection() as HttpsURLConnection
-            protect(connection.url.host)
+            val defaultFactory = SSLSocketFactory.getDefault() as SSLSocketFactory
+            connection.sslSocketFactory = ProtectedSSLSocketFactory(defaultFactory) { socket ->
+                protect(socket)
+            }
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/dns-message")
             connection.setRequestProperty("Accept", "application/dns-message")
             connection.doOutput = true
-            connection.connectTimeout = 3000
-            connection.readTimeout = 3000
+            connection.connectTimeout = 4000
+            connection.readTimeout = 4000
 
-            connection.outputStream.write(buffer, 0, length)
-            connection.outputStream.flush()
+            connection.outputStream.use { out ->
+                out.write(dnsQuery)
+                out.flush()
+            }
 
             if (connection.responseCode == 200) {
-                val responseBytes = connection.inputStream.readBytes()
-                outputStream.write(responseBytes)
+                return connection.inputStream.readBytes()
             }
         } catch (e: Exception) {
         }
+        return null
     }
 
-    private fun forwardDoT(buffer: ByteArray, length: Int, targetIp: String, domain: String, outputStream: FileOutputStream) {
+    private fun queryDoT(dnsQuery: ByteArray, targetIp: String, domain: String): ByteArray? {
         try {
             val factory = SSLSocketFactory.getDefault()
-            val socket = factory.createSocket(targetIp, 853) as javax.net.ssl.SSLSocket
-            protect(socket)
-            socket.soTimeout = 3000
+            val rawSocket = factory.createSocket(targetIp, 853)
+            protect(rawSocket)
+            val socket = rawSocket as javax.net.ssl.SSLSocket
+            socket.soTimeout = 4000
             socket.startHandshake()
 
             val out = socket.outputStream
-            val dnsPayloadLength = length
-            out.write((dnsPayloadLength shr 8) and 0xFF)
-            out.write(dnsPayloadLength and 0xFF)
-            out.write(buffer, 0, length)
+            val len = dnsQuery.size
+            out.write((len shr 8) and 0xFF)
+            out.write(len and 0xFF)
+            out.write(dnsQuery)
             out.flush()
 
             val inStream = socket.inputStream
@@ -220,23 +387,144 @@ class DnsVpnService : VpnService() {
                     if (read == -1) break
                     bytesRead += read
                 }
-                outputStream.write(respBuffer, 0, bytesRead)
+                socket.close()
+                return respBuffer
             }
             socket.close()
         } catch (e: Exception) {
         }
+        return null
     }
 
-    private fun protect(host: String) {
-        try {
-            val addrs = InetAddress.getAllByName(host)
-            for (addr in addrs) {
-                val dummySocket = DatagramSocket()
-                protect(dummySocket)
-                dummySocket.close()
-            }
-        } catch (e: Exception) {
+    private fun buildIp4UdpResponsePacket(
+        srcIp: ByteArray,
+        dstIp: ByteArray,
+        srcPort: Int,
+        dstPort: Int,
+        dnsPayload: ByteArray
+    ): ByteArray {
+        val payloadLen = dnsPayload.size
+        val udpLen = 8 + payloadLen
+        val totalLen = 20 + udpLen
+        val packet = ByteArray(totalLen)
+
+        packet[0] = 0x45.toByte()
+        packet[1] = 0x00.toByte()
+        packet[2] = ((totalLen shr 8) and 0xFF).toByte()
+        packet[3] = (totalLen and 0xFF).toByte()
+        packet[4] = 0x00.toByte()
+        packet[5] = 0x01.toByte()
+        packet[6] = 0x40.toByte()
+        packet[7] = 0x00.toByte()
+        packet[8] = 64.toByte()
+        packet[9] = 17.toByte()
+        packet[10] = 0x00.toByte()
+        packet[11] = 0x00.toByte()
+
+        System.arraycopy(srcIp, 0, packet, 12, 4)
+        System.arraycopy(dstIp, 0, packet, 16, 4)
+
+        var ipSum = 0L
+        for (i in 0 until 10) {
+            val word = ((packet[i * 2].toInt() and 0xFF) shl 8) or (packet[i * 2 + 1].toInt() and 0xFF)
+            ipSum += word
         }
+        while (ipSum shr 16 > 0) {
+            ipSum = (ipSum and 0xFFFF) + (ipSum shr 16)
+        }
+        val ipChecksum = (ipSum.inv() and 0xFFFF).toInt()
+        packet[10] = ((ipChecksum shr 8) and 0xFF).toByte()
+        packet[11] = (ipChecksum and 0xFF).toByte()
+
+        packet[20] = ((srcPort shr 8) and 0xFF).toByte()
+        packet[21] = (srcPort and 0xFF).toByte()
+        packet[22] = ((dstPort shr 8) and 0xFF).toByte()
+        packet[23] = (dstPort and 0xFF).toByte()
+        packet[24] = ((udpLen shr 8) and 0xFF).toByte()
+        packet[25] = (udpLen and 0xFF).toByte()
+        packet[26] = 0x00.toByte()
+        packet[27] = 0x00.toByte()
+
+        System.arraycopy(dnsPayload, 0, packet, 28, payloadLen)
+        return packet
+    }
+
+    private fun buildIp6UdpResponsePacket(
+        srcIp: ByteArray,
+        dstIp: ByteArray,
+        srcPort: Int,
+        dstPort: Int,
+        dnsPayload: ByteArray
+    ): ByteArray {
+        val payloadLen = dnsPayload.size
+        val udpLen = 8 + payloadLen
+        val totalLen = 40 + udpLen
+        val packet = ByteArray(totalLen)
+
+        packet[0] = 0x60.toByte()
+        packet[1] = 0x00.toByte()
+        packet[2] = 0x00.toByte()
+        packet[3] = 0x00.toByte()
+        packet[4] = ((udpLen shr 8) and 0xFF).toByte()
+        packet[5] = (udpLen and 0xFF).toByte()
+        packet[6] = 17.toByte()
+        packet[7] = 64.toByte()
+
+        System.arraycopy(srcIp, 0, packet, 8, 16)
+        System.arraycopy(dstIp, 0, packet, 24, 16)
+
+        packet[40] = ((srcPort shr 8) and 0xFF).toByte()
+        packet[41] = (srcPort and 0xFF).toByte()
+        packet[42] = ((dstPort shr 8) and 0xFF).toByte()
+        packet[43] = (dstPort and 0xFF).toByte()
+        packet[44] = ((udpLen shr 8) and 0xFF).toByte()
+        packet[45] = (udpLen and 0xFF).toByte()
+
+        val checksum = calculateIp6UdpChecksum(srcIp, dstIp, srcPort, dstPort, udpLen, dnsPayload)
+        packet[46] = ((checksum shr 8) and 0xFF).toByte()
+        packet[47] = (checksum and 0xFF).toByte()
+
+        System.arraycopy(dnsPayload, 0, packet, 48, payloadLen)
+        return packet
+    }
+
+    private fun calculateIp6UdpChecksum(
+        srcIp: ByteArray,
+        dstIp: ByteArray,
+        srcPort: Int,
+        dstPort: Int,
+        udpLen: Int,
+        payload: ByteArray
+    ): Int {
+        var sum = 0L
+
+        for (i in 0 until 16 step 2) {
+            sum += ((srcIp[i].toInt() and 0xFF) shl 8) or (srcIp[i + 1].toInt() and 0xFF)
+        }
+        for (i in 0 until 16 step 2) {
+            sum += ((dstIp[i].toInt() and 0xFF) shl 8) or (dstIp[i + 1].toInt() and 0xFF)
+        }
+
+        sum += udpLen
+        sum += 17
+
+        sum += srcPort
+        sum += dstPort
+        sum += udpLen
+
+        for (i in payload.indices step 2) {
+            val b1 = payload[i].toInt() and 0xFF
+            val b2 = if (i + 1 < payload.size) payload[i + 1].toInt() and 0xFF else 0
+            sum += (b1 shl 8) or b2
+        }
+
+        while (sum shr 16 > 0) {
+            sum = (sum and 0xFFFF) + (sum shr 16)
+        }
+
+        var checksum = (sum.inv() and 0xFFFF).toInt()
+        if (checksum == 0) checksum = 0xFFFF
+        return checksum
     }
 
     private fun stopVpn() {
