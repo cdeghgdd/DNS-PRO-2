@@ -27,7 +27,9 @@ export const BottomNav: React.FC = () => {
             key={tab.key}
             to={tab.path}
             className={`flex flex-col items-center justify-center flex-1 py-1 transition-all duration-200 active:scale-95 ${
-              isActive ? "text-primary font-bold" : "text-base-content/50 hover:text-base-content/80"
+              isActive
+                ? "text-primary font-bold"
+                : "text-base-content/50 hover:text-base-content/80"
             }`}
           >
             <div
@@ -44,4 +46,3 @@ export const BottomNav: React.FC = () => {
     </nav>
   );
 };
-

@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react'
 import { DnsVpn } from '../plugins/dns-vpn.plugin'
 import { useDnsStore } from '../store/useDnsStore'
 import { useLogStore } from '../store/useLogStore'
+import { useI18n } from './useI18n'
 import { ServerStore } from '../types'
 
 export function useDnsVpn() {
@@ -15,6 +16,7 @@ export function useDnsVpn() {
     addRecentServer
   } = useDnsStore()
 
+  const { t } = useI18n()
   const addLog = useLogStore((s) => s.addLog)
 
   const checkStatus = useCallback(async () => {
@@ -44,6 +46,12 @@ export function useDnsVpn() {
       setIsConnecting(true)
       addLog('info', `Requesting VPN permission for ${server.name}...`)
 
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+        try {
+          await Notification.requestPermission()
+        } catch {}
+      }
+
       const perm = await DnsVpn.requestPermission()
       if (!perm.granted) {
         setIsConnecting(false)
@@ -57,7 +65,10 @@ export function useDnsVpn() {
         servers: server.servers,
         dnsType: server.dnsType || 'udp',
         dohUrl: server.dohUrl,
-        dotDomain: server.dotDomain
+        dotDomain: server.dotDomain,
+        serverName: server.name,
+        notificationTitle: t('title'),
+        disconnectText: t('disconnect')
       })
 
       if (res.success) {
@@ -66,6 +77,16 @@ export function useDnsVpn() {
         setIsConnecting(false)
         addRecentServer(server)
         addLog('success', `Successfully connected to ${server.name}`)
+
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification(t('title'), {
+              body: server.name,
+              tag: 'dns-vpn-connected'
+            })
+          } catch {}
+        }
+
         return true
       } else {
         setIsConnecting(false)

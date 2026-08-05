@@ -81,6 +81,12 @@ class DnsVpnService : VpnService() {
             private set
         var currentDotDomain = ""
             private set
+        var currentServerName = ""
+            private set
+        var notificationTitleText = "DNS Changer"
+            private set
+        var disconnectActionText = "Disconnect"
+            private set
     }
 
     private var vpnInterface: ParcelFileDescriptor? = null
@@ -98,12 +104,15 @@ class DnsVpnService : VpnService() {
             val dnsType = intent.getStringExtra("dnsType") ?: "udp"
             val dohUrl = intent.getStringExtra("dohUrl") ?: ""
             val dotDomain = intent.getStringExtra("dotDomain") ?: ""
-            startVpn(servers, dnsType, dohUrl, dotDomain)
+            val serverName = intent.getStringExtra("serverName") ?: ""
+            val notificationTitle = intent.getStringExtra("notificationTitle") ?: "DNS Changer"
+            val disconnectText = intent.getStringExtra("disconnectText") ?: "Disconnect"
+            startVpn(servers, dnsType, dohUrl, dotDomain, serverName, notificationTitle, disconnectText)
         }
         return START_STICKY
     }
 
-    private fun startVpn(servers: ArrayList<String>, dnsType: String, dohUrl: String, dotDomain: String) {
+    private fun startVpn(servers: ArrayList<String>, dnsType: String, dohUrl: String, dotDomain: String, serverName: String, notificationTitle: String, disconnectText: String) {
         if (isRunning) {
             stopVpn()
         }
@@ -111,9 +120,12 @@ class DnsVpnService : VpnService() {
         currentDnsType = dnsType
         currentDohUrl = dohUrl
         currentDotDomain = dotDomain
+        currentServerName = serverName
+        if (notificationTitle.isNotEmpty()) notificationTitleText = notificationTitle
+        if (disconnectText.isNotEmpty()) disconnectActionText = disconnectText
 
         createNotificationChannel()
-        val notification = createNotification("Connecting to DNS...")
+        val notification = createNotification("Connecting...")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
         } else {
@@ -158,7 +170,8 @@ class DnsVpnService : VpnService() {
 
             isRunning = true
             currentStatus = "connected"
-            updateNotification("Connected to " + servers.joinToString(", "))
+            val displayServerText = if (serverName.isNotEmpty()) serverName else servers.joinToString(", ")
+            updateNotification(displayServerText)
 
             serviceScope.launch {
                 runDnsProxy()
@@ -552,9 +565,11 @@ class DnsVpnService : VpnService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "DNS Changer VPN Service",
-                NotificationManager.IMPORTANCE_LOW
-            )
+                "DNS Changer Service",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                setShowBadge(false)
+            }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
@@ -574,13 +589,15 @@ class DnsVpnService : VpnService() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("DNS Changer")
+            .setContentTitle(notificationTitleText)
             .setContentText(contentText)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(com.dnschanger.app.R.mipmap.ic_launcher)
             .setContentIntent(pendingMainIntent)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Disconnect", pendingStopIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, disconnectActionText, pendingStopIntent)
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
     }
 

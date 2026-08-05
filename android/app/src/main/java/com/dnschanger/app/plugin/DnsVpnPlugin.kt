@@ -1,9 +1,13 @@
 package com.dnschanger.app.plugin
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.VpnService
+import android.os.Build
 import androidx.activity.result.ActivityResult
+import androidx.core.content.ContextCompat
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
@@ -17,6 +21,12 @@ class DnsVpnPlugin : Plugin() {
 
     @PluginMethod
     fun requestPermission(call: PluginCall) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                activity.requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+            }
+        }
+
         val intent = VpnService.prepare(context)
         if (intent != null) {
             startActivityForResult(call, intent, "handleVpnPermissionResult")
@@ -40,6 +50,12 @@ class DnsVpnPlugin : Plugin() {
 
     @PluginMethod
     fun start(call: PluginCall) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                activity.requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+            }
+        }
+
         val prepareIntent = VpnService.prepare(context)
         if (prepareIntent != null) {
             val ret = JSObject()
@@ -59,6 +75,9 @@ class DnsVpnPlugin : Plugin() {
         val dnsType = call.getString("dnsType", "udp") ?: "udp"
         val dohUrl = call.getString("dohUrl", "") ?: ""
         val dotDomain = call.getString("dotDomain", "") ?: ""
+        val serverName = call.getString("serverName", "") ?: ""
+        val notificationTitle = call.getString("notificationTitle", "DNS Changer") ?: "DNS Changer"
+        val disconnectText = call.getString("disconnectText", "Disconnect") ?: "Disconnect"
 
         val intent = Intent(context, DnsVpnService::class.java).apply {
             action = DnsVpnService.ACTION_START
@@ -66,6 +85,9 @@ class DnsVpnPlugin : Plugin() {
             putExtra("dnsType", dnsType)
             putExtra("dohUrl", dohUrl)
             putExtra("dotDomain", dotDomain)
+            putExtra("serverName", serverName)
+            putExtra("notificationTitle", notificationTitle)
+            putExtra("disconnectText", disconnectText)
         }
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {

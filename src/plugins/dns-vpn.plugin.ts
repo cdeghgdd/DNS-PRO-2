@@ -8,6 +8,9 @@ export interface DnsVpnPlugin {
     dnsType: DnsType
     dohUrl?: string
     dotDomain?: string
+    serverName?: string
+    notificationTitle?: string
+    disconnectText?: string
   }): Promise<{ success: boolean; error?: string }>
   stop(): Promise<{ success: boolean }>
   status(): Promise<VpnStatus>
