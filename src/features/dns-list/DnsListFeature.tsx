@@ -147,7 +147,7 @@ export const DnsListFeature: React.FC<DnsListProps> = ({
       </div>
 
       {/* DNS list */}
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-6 pt-2 no-scrollbar">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-y-contain touch-pan-y pb-6 pt-2 no-scrollbar">
         {sortedServers.map((srv) => {
           const pingVal = pings[srv.key];
 
