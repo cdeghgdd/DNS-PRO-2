@@ -5,24 +5,12 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release Version (e.g. v1.0.0)'
-        required: false
-        default: 'v1.0.0'
-      release_type:
-        type: choice
-        description: 'Build Type (Release or Demo)'
-        required: true
-        default: 'release'
-        options:
-          - 'release'
-          - 'demo'
 
 jobs:
   build-and-release:
     name: Build Android APK & Create Release
     runs-on: ubuntu-latest
+
     permissions:
       contents: write
 
@@ -70,37 +58,48 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           cd android
-          ./gradlew assembleRelease
+
+          if [ -n "$KEYSTORE_BASE64" ] && [ -f app/keystore.jks ]; then
+            ./gradlew assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
 
       - name: Prepare Release Artifacts
         env:
-          RELEASE_VERSION: ${{ github.event.inputs.version || github.ref_name }}
-          BUILD_TYPE: ${{ github.event.inputs.release_type || 'release' }}
+          RELEASE_VERSION: ${{ github.ref_name }}
         run: |
           mkdir -p release-assets
-          VERSION="${RELEASE_VERSION:-v1.0.0}"
-          TYPE="${BUILD_TYPE}"
+
           if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
-            cp android/app/build/outputs/apk/release/app-release.apk "release-assets/dnschanger-mobile-${VERSION}-${TYPE}.apk"
-          elif [ -f android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then
-            cp android/app/build/outputs/apk/release/app-release-unsigned.apk "release-assets/dnschanger-mobile-${VERSION}-${TYPE}-unsigned.apk"
+            cp android/app/build/outputs/apk/release/app-release.apk \
+              "release-assets/DNS-PRO-2-${RELEASE_VERSION}-release.apk"
+          elif [ -f android/app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp android/app/build/outputs/apk/debug/app-debug.apk \
+              "release-assets/DNS-PRO-2-${RELEASE_VERSION}-debug.apk"
+          else
+            echo "ERROR: No APK was produced"
+            exit 1
           fi
+
+          echo "===== APK ====="
+          ls -lh release-assets/
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk
-          path: release-assets/*
+          name: dns-pro-2-apk
+          path: release-assets/*.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: release-assets/*
+          files: release-assets/*.apk
           draft: false
-          prerelease: ${{ github.event.inputs.release_type == 'demo' }}
+          prerelease: false
           generate_release_notes: true
-          tag_name: ${{ github.event.inputs.version || github.ref_name }}
-          name: ${{ github.event.inputs.release_type == 'demo' && 'Demo Release ' || 'Release ' }}${{ github.event.inputs.version || github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          name: DNS PRO 2 ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
