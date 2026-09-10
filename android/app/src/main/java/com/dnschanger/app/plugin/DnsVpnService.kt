@@ -83,7 +83,7 @@ class DnsVpnService : VpnService() {
             private set
         var currentServerName = ""
             private set
-        var notificationTitleText = "DNS Changer"
+        var notificationTitleText = "DNS PRO 2"
             private set
         var disconnectActionText = "Disconnect"
             private set
@@ -105,7 +105,7 @@ class DnsVpnService : VpnService() {
             val dohUrl = intent.getStringExtra("dohUrl") ?: ""
             val dotDomain = intent.getStringExtra("dotDomain") ?: ""
             val serverName = intent.getStringExtra("serverName") ?: ""
-            val notificationTitle = intent.getStringExtra("notificationTitle") ?: "DNS Changer"
+            val notificationTitle = intent.getStringExtra("notificationTitle") ?: "DNS PRO 2"
             val disconnectText = intent.getStringExtra("disconnectText") ?: "Disconnect"
             startVpn(servers, dnsType, dohUrl, dotDomain, serverName, notificationTitle, disconnectText)
         }
@@ -565,7 +565,7 @@ class DnsVpnService : VpnService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "DNS Changer Service",
+                "DNS PRO 2 Service",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 setShowBadge(false)

@@ -6,13 +6,16 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
 }
 
-html, body {
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -22,4 +25,8 @@ html, body {
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+}
+
+body {
+  background: #050706;
 }

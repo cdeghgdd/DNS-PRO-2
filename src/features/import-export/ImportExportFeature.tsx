@@ -70,8 +70,8 @@ export const ImportExportFeature: React.FC = () => {
   }
 
   return (
-    <div className="bg-base-100 border border-base-300 rounded-2xl p-4 shadow-sm space-y-3">
-      <h4 className="font-bold text-sm text-base-content">Backup & Restore</h4>
+    <div className="bg-[#0a0f0c] border border-white/10 rounded-2xl p-4 shadow-sm space-y-3">
+      <h4 className="font-bold text-sm text-white">Backup & Restore</h4>
       <div className="flex gap-2">
         <button
           onClick={handleExport}

@@ -1,6 +1,6 @@
 export const translations = {
   eng: {
-    title: 'DNS Changer',
+    title: 'DNS PRO 2',
     connectedTo: 'Connected to {server}',
     disconnected: 'Disconnected',
     connecting: 'Connecting...',

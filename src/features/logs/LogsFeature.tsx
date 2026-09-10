@@ -16,10 +16,10 @@ export const LogsFeature: React.FC = () => {
   }
 
   return (
-    <div className="bg-base-100 border border-base-300 rounded-2xl p-4 shadow-sm space-y-3">
+    <div className="bg-[#0a0f0c] border border-white/10 rounded-2xl p-4 shadow-sm space-y-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-bold text-base-content">
-          <Terminal className="w-4 h-4 text-primary" />
+        <div className="flex items-center gap-2 text-sm font-bold text-white">
+          <Terminal className="w-4 h-4 text-[#39ff88]" />
           <span>{t('logs')}</span>
         </div>
         <div className="flex items-center gap-1">
@@ -42,9 +42,9 @@ export const LogsFeature: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-base-300 rounded-xl p-3 h-48 overflow-y-auto font-mono text-xs space-y-1">
+      <div className="bg-[#111713] rounded-xl p-3 h-48 overflow-y-auto font-mono text-xs space-y-1">
         {logs.length === 0 ? (
-          <div className="text-base-content/40 text-center py-12">No logs recorded yet</div>
+          <div className="text-white/40 text-center py-12">No logs recorded yet</div>
         ) : (
           logs.map((log) => {
             const colorClass =
@@ -54,11 +54,11 @@ export const LogsFeature: React.FC = () => {
                 ? 'text-warning'
                 : log.level === 'success'
                 ? 'text-success'
-                : 'text-base-content/80'
+                : 'text-white/80'
 
             return (
               <div key={log.id} className="leading-tight flex gap-2">
-                <span className="text-base-content/40 select-none">[{log.timestamp}]</span>
+                <span className="text-white/40 select-none">[{log.timestamp}]</span>
                 <span className={colorClass}>{log.message}</span>
               </div>
             )

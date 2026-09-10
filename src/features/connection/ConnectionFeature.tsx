@@ -9,6 +9,8 @@ import {
   ChevronDown,
   Check,
   X,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 import { useDnsStore } from "../../store/useDnsStore";
 import { useDnsVpn } from "../../hooks/useDnsVpn";
@@ -29,30 +31,38 @@ export const ConnectionFeature: React.FC = () => {
     fetchRemoteServers();
   }, [fetchRemoteServers]);
 
-  const favoriteServers = useMemo(() => {
-    return servers.filter((s) => s.isPin);
-  }, [servers]);
+  const favoriteServers = useMemo(
+    () => servers.filter((s) => s.isPin),
+    [servers],
+  );
 
-  const selectableServers = useMemo(() => {
-    return favoriteServers.length > 0 ? favoriteServers : servers;
-  }, [favoriteServers, servers]);
+  const selectableServers = useMemo(
+    () => (favoriteServers.length > 0 ? favoriteServers : servers),
+    [favoriteServers, servers],
+  );
 
-  const defaultTargetServer = activeServer || favoriteServers[0] || servers[0];
+  const defaultTargetServer =
+    activeServer || favoriteServers[0] || servers[0];
 
   const handleToggle = async () => {
     if (isConnecting) return;
+
     if (isConnected) {
       await disconnect();
-    } else {
-      if (defaultTargetServer) {
-        await connect(defaultTargetServer);
-      }
+    } else if (defaultTargetServer) {
+      await connect(defaultTargetServer);
     }
   };
 
   const handlePingActive = () => {
-    if (defaultTargetServer && defaultTargetServer.servers.length > 0) {
-      pingServer(defaultTargetServer.key, defaultTargetServer.servers[0]);
+    if (
+      defaultTargetServer &&
+      defaultTargetServer.servers.length > 0
+    ) {
+      pingServer(
+        defaultTargetServer.key,
+        defaultTargetServer.servers[0],
+      );
     }
   };
 
@@ -61,175 +71,262 @@ export const ConnectionFeature: React.FC = () => {
     setIsSelectOpen(false);
   };
 
-  const activePing = defaultTargetServer ? pings[defaultTargetServer.key] : null;
+  const activePing = defaultTargetServer
+    ? pings[defaultTargetServer.key]
+    : null;
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 space-y-6 max-w-md mx-auto min-h-[80vh] relative">
-      <div className="text-center space-y-1 mt-4">
-        <h2 className="text-2xl font-black text-base-content tracking-tight">
+    <div className="min-h-full bg-[#050706] text-white px-4 pt-5 pb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-7">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl overflow-hidden border border-lime-400/30 bg-black shadow-lg shadow-lime-500/10">
+            <img
+              src="/dns_pro_logo.png"
+              alt="DNS PRO 2"
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          <div>
+            <div className="text-lg font-black tracking-tight">
+              DNS PRO <span className="text-lime-400">2</span>
+            </div>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+              Fast DNS • Secure Network
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={`px-3 py-1.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${
+            isConnected
+              ? "border-lime-400/30 bg-lime-400/10 text-lime-400"
+              : "border-white/10 bg-white/[0.03] text-white/40"
+          }`}
+        >
+          {isConnected ? "Protected" : "Offline"}
+        </div>
+      </div>
+
+      {/* Status */}
+      <div className="text-center mb-6">
+        <div className="flex justify-center mb-3">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-lime-400/10 border border-lime-400/10">
+            {isConnected ? (
+              <ShieldCheck className="w-3.5 h-3.5 text-lime-400" />
+            ) : (
+              <Zap className="w-3.5 h-3.5 text-lime-400" />
+            )}
+
+            <span className="text-[11px] font-bold text-lime-300">
+              {isConnected
+                ? "DNS PROTECTION ACTIVE"
+                : "READY TO CONNECT"}
+            </span>
+          </div>
+        </div>
+
+        <h1 className="text-2xl font-black tracking-tight">
           {isConnected
-            ? t("connectedTo", { server: defaultTargetServer?.name || "DNS" })
+            ? defaultTargetServer?.name || "DNS"
             : isConnecting
               ? t("connecting")
-              : t("disconnected")}
-        </h2>
-        <p className="text-sm font-medium text-base-content/70">
+              : "DNS PRO 2"}
+        </h1>
+
+        <p className="text-xs text-white/40 mt-1 font-mono">
           {isConnected
             ? defaultTargetServer?.servers.join(" • ")
-            : defaultTargetServer?.name || "Select a server"}
+            : defaultTargetServer?.name || "Choose a DNS server"}
         </p>
       </div>
 
-      <div className="relative my-6 flex items-center justify-center">
-        <button
-          onClick={handleToggle}
-          disabled={isConnecting}
-          className={`w-44 h-44 rounded-full flex flex-col items-center justify-center shadow-xl transition-all duration-300 transform active:scale-95 ${
+      {/* Connect button */}
+      <div className="flex justify-center mb-8">
+        <div
+          className={`rounded-full p-2 transition-all duration-500 ${
             isConnected
-              ? "bg-success text-success-content ring-8 ring-success/20"
-              : isConnecting
-                ? "bg-warning text-warning-content ring-8 ring-warning/20 animate-pulse"
-                : "bg-primary text-primary-content ring-8 ring-primary/20"
+              ? "bg-lime-400/10 shadow-[0_0_70px_rgba(163,230,53,0.18)]"
+              : "bg-white/[0.02]"
           }`}
         >
-          <Power className="w-16 h-16 mb-2" />
-          <span className="text-base font-black uppercase tracking-wider">
-            {isConnecting ? t("connecting") : isConnected ? t("disconnect") : t("connect")}
-          </span>
-        </button>
+          <button
+            onClick={handleToggle}
+            disabled={isConnecting}
+            className={`w-52 h-52 rounded-full flex flex-col items-center justify-center border-2 transition-all duration-300 active:scale-95 ${
+              isConnected
+                ? "border-lime-400 bg-lime-400 text-black shadow-[0_0_45px_rgba(163,230,53,0.25)]"
+                : isConnecting
+                  ? "border-yellow-400 bg-yellow-400/10 text-yellow-300 animate-pulse"
+                  : "border-lime-400/50 bg-[#0b100c] text-lime-400 hover:border-lime-400"
+            }`}
+          >
+            <Power className="w-14 h-14 mb-3" strokeWidth={2.2} />
+
+            <span className="text-sm font-black uppercase tracking-[0.18em]">
+              {isConnecting
+                ? t("connecting")
+                : isConnected
+                  ? t("disconnect")
+                  : t("connect")}
+            </span>
+          </button>
+        </div>
       </div>
 
-      <div className="w-full space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <label className="text-xs font-bold text-base-content/80 flex items-center gap-1.5">
-            <Star className="w-4 h-4 text-warning fill-warning" />
-            <span>{t("selectFavoriteServer")}</span>
-          </label>
+      {/* DNS selector */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2 px-1">
+          <div className="flex items-center gap-2">
+            <Star className="w-4 h-4 text-lime-400" />
+            <span className="text-xs font-bold text-white/70">
+              DNS SERVER
+            </span>
+          </div>
+
+          {isConnected && (
+            <span className="text-[10px] text-lime-400 font-bold">
+              ACTIVE
+            </span>
+          )}
         </div>
 
         <button
           type="button"
-          onClick={() => !isConnected && !isConnecting && setIsSelectOpen(true)}
+          onClick={() =>
+            !isConnected &&
+            !isConnecting &&
+            setIsSelectOpen(true)
+          }
           disabled={isConnected || isConnecting}
-          className="w-full border border-base-300 bg-base-100 rounded-2xl p-3.5 flex items-center justify-between shadow-sm active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60"
+          className="w-full bg-[#0b100c] border border-white/10 rounded-2xl p-4 flex items-center justify-between active:scale-[0.99] transition-all disabled:opacity-50"
         >
-          <div className="flex items-center gap-3 truncate">
-            <div className="w-8 h-8 rounded-xl bg-base-200 flex items-center justify-center flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/10 flex items-center justify-center">
               {defaultTargetServer?.avatar ? (
                 <img
                   src={defaultTargetServer.avatar}
                   alt={defaultTargetServer.name}
-                  className="w-5 h-5 object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = "none";
-                  }}
+                  className="w-6 h-6 object-contain"
                 />
               ) : (
-                <ServerIcon className="w-4 h-4 text-primary" />
+                <ServerIcon className="w-5 h-5 text-lime-400" />
               )}
             </div>
-            <div className="text-left rtl:text-right truncate">
-              <div className="font-bold text-sm text-base-content truncate">
-                {defaultTargetServer?.name || t("selectFavoriteServer")}
+
+            <div className="text-left rtl:text-right min-w-0">
+              <div className="font-bold text-sm truncate">
+                {defaultTargetServer?.name ||
+                  "Select DNS Server"}
               </div>
-              <div className="text-xs text-base-content/60 font-mono truncate">
-                {defaultTargetServer?.servers.join(", ")}
+
+              <div className="text-[11px] text-white/35 font-mono truncate">
+                {defaultTargetServer?.servers.join(", ") ||
+                  "No server selected"}
               </div>
             </div>
           </div>
-          <ChevronDown className="w-5 h-5 text-base-content/60 flex-shrink-0" />
+
+          <ChevronDown className="w-5 h-5 text-white/30 flex-shrink-0" />
         </button>
       </div>
 
-      <div className="w-full">
-        <button
-          onClick={openAddCustom}
-          className="btn btn-outline btn-primary w-full rounded-2xl gap-2 font-bold shadow-sm"
-        >
-          <Plus className="w-5 h-5" />
-          <span>{t("addCustomServer")}</span>
-        </button>
-      </div>
-
+      {/* Server info */}
       {defaultTargetServer && (
-        <div className="w-full bg-base-100 border border-base-300 rounded-2xl p-4 shadow-sm space-y-3">
+        <div className="bg-[#0b100c] border border-white/10 rounded-2xl p-4 mb-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-base-200 flex items-center justify-center">
-                {defaultTargetServer.avatar ? (
-                  <img
-                    src={defaultTargetServer.avatar}
-                    alt={defaultTargetServer.name}
-                    className="w-6 h-6 object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <ServerIcon className="w-5 h-5 text-primary" />
-                )}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-white/[0.03] flex items-center justify-center">
+                <ServerIcon className="w-5 h-5 text-lime-400" />
               </div>
-              <div>
-                <h3 className="font-bold text-base-content">{defaultTargetServer.name}</h3>
-                <span className="text-xs text-base-content/60 uppercase">
+
+              <div className="min-w-0">
+                <div className="font-bold text-sm truncate">
+                  {defaultTargetServer.name}
+                </div>
+
+                <div className="text-[10px] text-white/35 uppercase tracking-wider">
                   {defaultTargetServer.dnsType || "UDP"} Protocol
-                </span>
+                </div>
               </div>
             </div>
+
             <button
               onClick={handlePingActive}
               disabled={isPinging}
-              className="btn btn-ghost btn-xs gap-1"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-lime-400/10 text-lime-400 text-xs font-bold active:scale-95"
             >
-              <Activity className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs">
-                {activePing !== null && activePing !== undefined
-                  ? `${activePing} ${t("ms")}`
-                  : t("ping")}
-              </span>
+              <Activity className="w-3.5 h-3.5" />
+
+              {activePing !== null &&
+              activePing !== undefined
+                ? `${activePing} ${t("ms")}`
+                : t("ping")}
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-base-200">
+          <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/5">
             <div>
-              <span className="text-base-content/60 block">Primary DNS</span>
-              <span className="font-mono font-semibold text-base-content">
+              <div className="text-[10px] text-white/30 mb-1">
+                PRIMARY DNS
+              </div>
+              <div className="font-mono text-xs font-bold text-lime-300 truncate">
                 {defaultTargetServer.servers[0] || "-"}
-              </span>
+              </div>
             </div>
+
             <div>
-              <span className="text-base-content/60 block">Secondary DNS</span>
-              <span className="font-mono font-semibold text-base-content">
+              <div className="text-[10px] text-white/30 mb-1">
+                SECONDARY DNS
+              </div>
+              <div className="font-mono text-xs font-bold text-lime-300 truncate">
                 {defaultTargetServer.servers[1] || "-"}
-              </span>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {isSelectOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-          <div className="fixed inset-0" onClick={() => setIsSelectOpen(false)} />
+      {/* Custom DNS */}
+      <button
+        onClick={openAddCustom}
+        className="w-full h-12 rounded-2xl border border-lime-400/20 bg-lime-400/5 text-lime-400 flex items-center justify-center gap-2 font-bold text-sm active:scale-[0.98] transition-all"
+      >
+        <Plus className="w-5 h-5" />
+        <span>{t("addCustomServer")}</span>
+      </button>
 
-          <div className="relative w-full max-w-md bg-base-100 rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl z-10 max-h-[75vh] flex flex-col space-y-4">
-            <div className="flex items-center justify-between border-b border-base-200 pb-3">
+      {/* Server selector */}
+      {isSelectOpen && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+          <div
+            className="fixed inset-0"
+            onClick={() => setIsSelectOpen(false)}
+          />
+
+          <div className="relative w-full max-w-md bg-[#090d0a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl z-10 max-h-[75vh] flex flex-col">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-warning fill-warning" />
-                <h3 className="font-black text-lg text-base-content">
-                  {t("selectFavoriteServer")}
+                <Star className="w-5 h-5 text-lime-400" />
+                <h3 className="font-black text-lg">
+                  Select DNS Server
                 </h3>
               </div>
+
               <button
                 onClick={() => setIsSelectOpen(false)}
-                className="btn btn-ghost btn-circle btn-sm text-base-content/70"
+                className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 text-white/60" />
               </button>
             </div>
 
-            <div className="overflow-y-auto space-y-2.5 flex-1 pr-1 no-scrollbar">
+            <div className="overflow-y-auto space-y-2.5 flex-1 pt-4 no-scrollbar">
               {selectableServers.map((srv) => {
-                const isSelected = defaultTargetServer?.key === srv.key;
+                const isSelected =
+                  defaultTargetServer?.key === srv.key;
+
                 return (
                   <button
                     key={srv.key}
@@ -237,37 +334,36 @@ export const ConnectionFeature: React.FC = () => {
                     onClick={() => handleSelectServer(srv)}
                     className={`w-full p-3.5 rounded-2xl border flex items-center justify-between transition-all text-left rtl:text-right ${
                       isSelected
-                        ? "border-primary bg-primary/10 font-bold"
-                        : "border-base-200 hover:bg-base-200/50"
+                        ? "border-lime-400/40 bg-lime-400/10"
+                        : "border-white/10 bg-white/[0.02]"
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-base-200 flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
                         {srv.avatar ? (
                           <img
                             src={srv.avatar}
                             alt={srv.name}
-                            className="w-5 h-5 object-contain"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = "none";
-                            }}
+                            className="w-6 h-6 object-contain"
                           />
                         ) : (
-                          <ServerIcon className="w-5 h-5 text-primary" />
+                          <ServerIcon className="w-5 h-5 text-lime-400" />
                         )}
                       </div>
+
                       <div className="min-w-0">
-                        <div className="font-bold text-sm text-base-content truncate">
+                        <div className="font-bold text-sm truncate">
                           {srv.name}
                         </div>
-                        <div className="text-xs text-base-content/60 font-mono truncate">
+
+                        <div className="text-[11px] text-white/35 font-mono truncate">
                           {srv.servers.join(", ")}
                         </div>
                       </div>
                     </div>
 
                     {isSelected && (
-                      <div className="w-7 h-7 rounded-full bg-primary text-primary-content flex items-center justify-center flex-shrink-0 ml-2 rtl:mr-2">
+                      <div className="w-7 h-7 rounded-full bg-lime-400 text-black flex items-center justify-center flex-shrink-0">
                         <Check className="w-4 h-4" />
                       </div>
                     )}

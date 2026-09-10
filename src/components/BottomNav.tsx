@@ -1,48 +1,64 @@
 import type React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { MdOutlineExplore } from "react-icons/md";
-import { TbSettings, TbSmartHome } from "react-icons/tb";
-import { useI18n } from "../hooks/useI18n";
+import { Home, Compass, Settings } from "lucide-react";
 
 export const BottomNav: React.FC = () => {
-  const { t, lng } = useI18n();
   const location = useLocation();
 
-  const tabs = [
-    { key: "home", path: "/", label: t("home"), icon: TbSmartHome },
-    { key: "explore", path: "/explorer", label: t("explore"), icon: MdOutlineExplore },
-    { key: "settings", path: "/settings", label: t("settings"), icon: TbSettings },
+  const items = [
+    {
+      to: "/",
+      label: "Home",
+      icon: Home,
+    },
+    {
+      to: "/explorer",
+      label: "DNS",
+      icon: Compass,
+    },
+    {
+      to: "/settings",
+      label: "Settings",
+      icon: Settings,
+    },
   ];
 
   return (
-    <nav
-      className="absolute bottom-0 left-0 right-0 max-w-md mx-auto bg-base-100/90 backdrop-blur-md border-t border-base-300/60 flex items-center justify-around h-16 px-4 z-40"
-      dir={lng === "fa" ? "rtl" : "ltr"}
-    >
-      {tabs.map((tab) => {
-        const isActive = location.pathname === tab.path;
-        const IconComponent = tab.icon;
-        return (
-          <Link
-            key={tab.key}
-            to={tab.path}
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all duration-200 active:scale-95 ${
-              isActive
-                ? "text-primary font-bold"
-                : "text-base-content/50 hover:text-base-content/80"
-            }`}
-          >
-            <div
-              className={`px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${
-                isActive ? "bg-primary/15 scale-105" : ""
+    <nav className="shrink-0 border-t border-white/10 bg-[#070908]/95 backdrop-blur-xl px-3 py-2">
+      <div className="mx-auto flex max-w-md items-center justify-around">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const active =
+            item.to === "/"
+              ? location.pathname === "/"
+              : location.pathname.startsWith(item.to);
+
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`flex min-w-[82px] flex-col items-center gap-1 rounded-2xl px-4 py-2 transition-all ${
+                active
+                  ? "bg-[#39ff88]/10 text-[#39ff88]"
+                  : "text-white/45 hover:text-white/80"
               }`}
             >
-              <IconComponent className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] mt-0.5 tracking-tight font-medium">{tab.label}</span>
-          </Link>
-        );
-      })}
+              <Icon
+                size={21}
+                strokeWidth={active ? 2.5 : 2}
+              />
+
+              <span className="text-[11px] font-medium">
+                {item.label}
+              </span>
+
+              {active && (
+                <span className="h-1 w-1 rounded-full bg-[#39ff88]" />
+              )}
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 };

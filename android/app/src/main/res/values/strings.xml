@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">DNS Changer</string>
-    <string name="title_activity_main">DNS Changer</string>
+    <string name="app_name">DNS PRO 2</string>
+    <string name="title_activity_main">DNS PRO 2</string>
     <string name="package_name">com.dnschanger.app</string>
-    <string name="custom_url">https://dnschanger.app</string>
+    <string name="custom_url"></string>
 </resources>

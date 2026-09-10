@@ -7,12 +7,14 @@ import {
   RouterProvider,
   Outlet,
 } from "@tanstack/react-router";
+
 import { BottomNav } from "./components/BottomNav";
 import { CustomDnsFeature } from "./features/custom-dns/CustomDnsFeature";
 import {
   CustomDnsModalProvider,
   useCustomDnsModal,
 } from "./context/CustomDnsModalContext";
+
 import { HomePage } from "./pages/Home";
 import { ExplorerPage } from "./pages/Explorer";
 import { SettingsPage } from "./pages/Settings";
@@ -20,6 +22,7 @@ import { useSettingsStore } from "./store/useSettingsStore";
 
 const ModalWrapper: React.FC = () => {
   const { isOpen, closeCustom, editingServer } = useCustomDnsModal();
+
   return (
     <CustomDnsFeature
       isOpen={isOpen}
@@ -34,6 +37,7 @@ const RootLayout: React.FC = () => {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
+
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
@@ -44,16 +48,23 @@ const RootLayout: React.FC = () => {
   return (
     <CustomDnsModalProvider>
       <div
-        className="h-screen w-full max-w-md mx-auto bg-base-200 text-base-content flex flex-col font-sans overflow-hidden relative select-none"
         dir={lng === "fa" ? "rtl" : "ltr"}
+        className="relative mx-auto flex h-screen w-full max-w-md flex-col overflow-hidden bg-[#050706] font-sans text-white select-none"
       >
-        <main className="flex-1 overflow-hidden relative flex flex-col pb-20">
+        {/* Subtle green glow */}
+        <div className="pointer-events-none absolute -left-24 -top-24 h-48 w-48 rounded-full bg-[#39ff88]/5 blur-3xl" />
+
+        <div className="pointer-events-none absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-[#39ff88]/5 blur-3xl" />
+
+        <main className="relative z-10 flex flex-1 flex-col overflow-hidden pb-20">
           <Outlet />
         </main>
 
         <ModalWrapper />
 
-        <BottomNav />
+        <div className="relative z-20">
+          <BottomNav />
+        </div>
       </div>
     </CustomDnsModalProvider>
   );
@@ -87,7 +98,9 @@ const routeTree = rootRoute.addChildren([
   settingsRoute,
 ]);
 
-const router = createRouter({ routeTree });
+const router = createRouter({
+  routeTree,
+});
 
 declare module "@tanstack/react-router" {
   interface Register {

@@ -76,7 +76,7 @@ class DnsVpnPlugin : Plugin() {
         val dohUrl = call.getString("dohUrl", "") ?: ""
         val dotDomain = call.getString("dotDomain", "") ?: ""
         val serverName = call.getString("serverName", "") ?: ""
-        val notificationTitle = call.getString("notificationTitle", "DNS Changer") ?: "DNS Changer"
+        val notificationTitle = call.getString("notificationTitle", "DNS PRO 2") ?: "DNS PRO 2"
         val disconnectText = call.getString("disconnectText", "Disconnect") ?: "Disconnect"
 
         val intent = Intent(context, DnsVpnService::class.java).apply {
