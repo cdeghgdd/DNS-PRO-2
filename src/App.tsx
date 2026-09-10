@@ -56,7 +56,7 @@ const RootLayout: React.FC = () => {
 
         <div className="pointer-events-none absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-[#39ff88]/5 blur-3xl" />
 
-        <main className="relative z-10 flex flex-1 flex-col overflow-hidden pb-20">
+        <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
           <Outlet />
         </main>
 
